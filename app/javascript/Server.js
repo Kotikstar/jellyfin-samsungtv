@@ -1,69 +1,28 @@
 var Server = {
-	serverAddr : "",
-	UserID : "",
-	UserName : "",
-	Device : "Samsung Smart TV",
-	DeviceID : "00000000000000000000000000000000",
-	AuthenticationToken : null,
-}
+    serverAddr: "",
+    UserID: "",
+    UserName: "",
+    Device: "Samsung Smart TV",
+    DeviceID: "00000000000000000000000000000000",
+    AuthenticationToken: null
+};
 
 //------------------------------------------------------------
 //      Getter & Setter Functions
 //------------------------------------------------------------
-
-Server.getAuthToken = function() {
-	return this.AuthenticationToken;
-}
-
-Server.getServerAddr = function() {
-	return this.serverAddr;
-}
-
-Server.setServerAddr = function(serverAddr) {
-	this.serverAddr = serverAddr;
-}
-
-Server.getUserID = function() {
-	return this.UserID;
-}
-
-Server.setUserID = function(UserID) {
-	this.UserID = UserID;
-}
-
-Server.getUserName = function() {
-	return this.UserName;
-}
-
-Server.setUserName = function(UserName) {
-	this.UserName = UserName;
-}
-
-Server.setUserFavourites = function(UserFavourites) {
-	this.UserFavourites = UserFavourites;
-}
-
-Server.getUserFavourites = function(UserFavourites) {
-	return this.UserFavourites;
-}
-
-Server.setDevice = function(Device) {
-	this.Device = Device;
-}
-
-//Used in Settings 
-Server.getDevice = function() {
-	return this.Device;
-}
-
-Server.setDeviceID = function(DeviceID) {
-	this.DeviceID = DeviceID;
-}
-
-//Required in Transcoding functions + guiPlayer
-Server.getDeviceID = function() {
-	return this.DeviceID;
-}
+Server.getAuthToken = function() { return this.AuthenticationToken; };
+Server.getServerAddr = function() { return this.serverAddr; };
+Server.setServerAddr = function(addr) { this.serverAddr = addr; };
+Server.getUserID = function() { return this.UserID; };
+Server.setUserID = function(id) { this.UserID = id; };
+Server.getUserName = function() { return this.UserName; };
+Server.setUserName = function(name) { this.UserName = name; };
+Server.setUserFavourites = function(favs) { this.UserFavourites = favs; };
+Server.getUserFavourites = function() { return this.UserFavourites; };
+Server.setDevice = function(d) { this.Device = d; };
+Server.getDevice = function() { return this.Device; };
+Server.setDeviceID = function(id) { this.DeviceID = id; };
+Server.getDeviceID = function() { return this.DeviceID; };
 //------------------------------------------------------------
 //      Generic Functions
 //------------------------------------------------------------
@@ -326,49 +285,101 @@ Server.getSubtitles = function(url) {
 }
 
 
-Server.videoStarted = function(showId,MediaSourceID,PlayMethod,PlaySessionId) {
-	var url = this.serverAddr + "/Sessions/Playing";
-	xmlHttp = new XMLHttpRequest();
-	if (xmlHttp) {
-		var contentToPost = '{"QueueableMediaTypes":["Video"],"CanSeek":false,"ItemId":"'+showId+'","PlaySessionId":"'+PlaySessionId+'","MediaSourceId":"'+MediaSourceID+'","IsPaused":false,"IsMuted":false,"PositionTicks":0,"PlayMethod":"'+PlayMethod+'"}';
-		xmlHttp.open("POST", url , true); //must be true!
-		xmlHttp = this.setRequestHeaders(xmlHttp);
-		xmlHttp.send(contentToPost);
-	}
+Server.videoStarted = function(itemId, mediaSourceId, playMethod, playSessionId) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", this.serverAddr + "/Sessions/Playing", true);
+    Server.setRequestHeaders(xhr);
+    xhr.onload = function() {
+        if (xhr.status >= 400) FileLog.write("Progress error (start): " + xhr.status);
+    };
+    xhr.onerror = function() {
+        FileLog.write("Network error on start POST");
+    };
+    var payload = {
+        QueueableMediaTypes: ["Video"],
+        CanSeek: false,
+        ItemId: itemId,
+        PlaySessionId: playSessionId,
+        MediaSourceId: mediaSourceId,
+        IsPaused: false,
+        IsMuted: false,
+        PositionTicks: 0,
+        PlayMethod: playMethod
+    };
+    xhr.send(JSON.stringify(payload));
 }
 
-Server.videoStopped = function(showId,MediaSourceID,ticks,PlayMethod,PlaySessionId) {
-	var url = this.serverAddr + "/Sessions/Playing/Stopped";
-	xmlHttp = new XMLHttpRequest();
-	if (xmlHttp) {
-		var contentToPost = '{"QueueableMediaTypes":["Video"],"CanSeek":false,"ItemId":"'+showId+'","PlaySessionId":"'+PlaySessionId+'","MediaSourceId":"'+MediaSourceID+'","IsPaused":false,"IsMuted":false,"PositionTicks":'+(ticks*10000)+',"PlayMethod":"'+PlayMethod+'"}';
-		xmlHttp.open("POST", url , true); //must be true!
-		xmlHttp = this.setRequestHeaders(xmlHttp);
-		xmlHttp.send(contentToPost);
-	}	
+Server.videoStopped = function(itemId, mediaSourceId, currentMs, playMethod, playSessionId) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", this.serverAddr + "/Sessions/Playing/Stopped", true);
+    Server.setRequestHeaders(xhr);
+    xhr.onload = function() {
+        if (xhr.status >= 400) FileLog.write("Progress error (stop): " + xhr.status);
+    };
+    xhr.onerror = function() {
+        FileLog.write("Network error on stop POST");
+    };
+    var payload = {
+        QueueableMediaTypes: ["Video"],
+        CanSeek: false,
+        ItemId: itemId,
+        PlaySessionId: playSessionId,
+        MediaSourceId: mediaSourceId,
+        IsPaused: false,
+        IsMuted: false,
+        PositionTicks: Math.floor(currentMs * 10000),
+        PlayMethod: playMethod
+    };
+    xhr.send(JSON.stringify(payload));
 }
 
-Server.videoPaused = function(showId,MediaSourceID,ticks,PlayMethod,PlaySessionId) {
-	var url = this.serverAddr + "/Sessions/Playing/Progress";
-	xmlHttp = new XMLHttpRequest();
-	if (xmlHttp) {
-		var contentToPost = '{"QueueableMediaTypes":["Video"],"CanSeek":false,"ItemId":"'+showId+'","PlaySessionId":"'+PlaySessionId+'","MediaSourceId":"'+MediaSourceID+'","IsPaused":true,"IsMuted":false,"PositionTicks":'+(ticks*10000)+',"PlayMethod":"'+PlayMethod+'"}';
-		xmlHttp.open("POST", url , true); //must be true!
-		xmlHttp = this.setRequestHeaders(xmlHttp);
-		xmlHttp.send(contentToPost);
-	}	
+Server.videoPaused = function(itemId, mediaSourceId, currentMs, playMethod, playSessionId) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", this.serverAddr + "/Sessions/Playing/Progress", true);
+    Server.setRequestHeaders(xhr);
+    xhr.onload = function() {
+        if (xhr.status >= 400) FileLog.write("Progress error (pause): " + xhr.status);
+    };
+    xhr.onerror = function() {
+        FileLog.write("Network error on pause POST");
+    };
+    var payload = {
+        QueueableMediaTypes: ["Video"],
+        CanSeek: false,
+        ItemId: itemId,
+        PlaySessionId: playSessionId,
+        MediaSourceId: mediaSourceId,
+        IsPaused: true,
+        IsMuted: false,
+        PositionTicks: Math.floor(currentMs * 10000),
+        PlayMethod: playMethod
+    };
+    xhr.send(JSON.stringify(payload));
 }
 
-Server.videoTime = function(showId,MediaSourceID,ticks,PlayMethod,PlaySessionId) {
-	var url = this.serverAddr + "/Sessions/Playing/Progress";
-	xmlHttp = new XMLHttpRequest();
-	if (xmlHttp) {
-		var contentToPost = '{"QueueableMediaTypes":["Video"],"CanSeek":false,"ItemId":"'+showId+'","PlaySessionId":"'+PlaySessionId+'","MediaSourceId":"'+MediaSourceID+'","IsPaused":false,"IsMuted":false,"PositionTicks":'+(ticks*10000)+',"PlayMethod":"'+PlayMethod+'"}';
-		xmlHttp.open("POST", url , true); //must be true!
-		xmlHttp = this.setRequestHeaders(xmlHttp);
-		xmlHttp.send(contentToPost);
-	}	
-}
+Server.videoTime = function(itemId, mediaSourceId, currentMs, playMethod, playSessionId) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", this.serverAddr + "/Sessions/Playing/Progress", true);
+    Server.setRequestHeaders(xhr);
+    xhr.onload = function() {
+        if (xhr.status >= 400) FileLog.write("Progress error (time): " + xhr.status);
+    };
+    xhr.onerror = function() {
+        FileLog.write("Network error on time POST");
+    };
+    var payload = {
+        QueueableMediaTypes: ["Video"],
+        CanSeek: false,
+        ItemId: itemId,
+        PlaySessionId: playSessionId,
+        MediaSourceId: mediaSourceId,
+        IsPaused: false,
+        IsMuted: false,
+        PositionTicks: Math.floor(currentMs * 10000),
+        PlayMethod: playMethod
+    };
+    xhr.send(JSON.stringify(payload));
+};
 
 Server.stopHLSTranscode = function() {
 	var url = this.serverAddr + "/Videos/ActiveEncodings?DeviceId="+this.DeviceID;
@@ -504,10 +515,10 @@ Server.DELETE = function(url, item) {
 Server.testConnectionSettings = function (server,fromFile) {	
 	xmlHttp = new XMLHttpRequest();
 	if (xmlHttp) {
-		xmlHttp.open("GET", "http://" + server + "/jellyfin/System/Info/Public?format=json",false);
+		xmlHttp.open("GET", "http://" + server + "/emby/System/Info/Public?format=json",false);
 		xmlHttp.setRequestHeader("Content-Type", 'application/json');
 		xmlHttp.onreadystatechange = function () {
-			GuiNotifications.setNotification("Connection Test","Network Status",true);
+			GuiNotifications.setNotification("hello","Network Status",true);
 			if (xmlHttp.readyState == 4) {
 		        if(xmlHttp.status === 200) {
 			    	if (fromFile == false) {
@@ -515,7 +526,7 @@ Server.testConnectionSettings = function (server,fromFile) {
 			    		File.saveServerToFile(json.Id,json.ServerName,server); 
 			    	}
 			       	//Set Server.serverAddr!
-			       	Server.setServerAddr("http://" + server + "/jellyfin");
+			       	Server.setServerAddr("http://" + server + "/emby");
 			       	//Check Server Version
 			       	if (ServerVersion.checkServerVersion()) {
 			       		GuiUsers.start(true);
